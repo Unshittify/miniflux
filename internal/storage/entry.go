@@ -612,6 +612,16 @@ func (s *Storage) UnshareEntry(userID int64, entryID int64) (err error) {
 	return
 }
 
+// UpdateArchiveDate removes the share code for the given entry.
+func (s *Storage) UpdateArchiveDate(userID int64, entryID int64) (err error) {
+	query := `UPDATE entries SET archived_at = now() WHERE user_id=$1 AND id=$2`
+	_, err = s.db.Exec(query, userID, entryID)
+	if err != nil {
+		err = fmt.Errorf(`store: unable to remove share code for entry #%d: %v`, entryID, err)
+	}
+	return
+}
+
 func removeDuplicates(l []string) []string {
 	slices.Sort(l)
 	return slices.Compact(l)

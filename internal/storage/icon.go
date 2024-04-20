@@ -107,7 +107,22 @@ func (s *Storage) CreateFeedIcon(feedID int64, icon *model.Icon) error {
 		}
 	}
 
+	_, err = s.db.Exec(`DELETE FROM feed_icons WHERE feed_id = $1`, feedID)
+	if err != nil {
+		return fmt.Errorf(`store: unable to create feed icon: %v`, err)
+	}
+
 	_, err = s.db.Exec(`INSERT INTO feed_icons (feed_id, icon_id) VALUES ($1, $2)`, feedID, icon.ID)
+	if err != nil {
+		return fmt.Errorf(`store: unable to create feed icon: %v`, err)
+	}
+
+	return nil
+}
+
+// DeleteUnusedIcons deletes icons not used by any feed
+func (s *Storage) DeleteUnusedIcons() error {
+	_, err := s.db.Exec(`DELETE FROM icons WHERE id NOT IN (SELECT DISTINCT icon_id FROM feed_icons)`)
 	if err != nil {
 		return fmt.Errorf(`store: unable to create feed icon: %v`, err)
 	}

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"log/slog"
+	"time"
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/integration"
@@ -96,6 +97,7 @@ func CreateFeedFromSubscriptionDiscovery(store *storage.Storage, userID int64, f
 	checkFeedIcon(
 		store,
 		requestBuilder,
+		userID,
 		subscription.ID,
 		subscription.SiteURL,
 		subscription.IconURL,
@@ -190,6 +192,7 @@ func CreateFeed(store *storage.Storage, userID int64, feedCreationRequest *model
 	checkFeedIcon(
 		store,
 		requestBuilder,
+		userID,
 		subscription.ID,
 		subscription.SiteURL,
 		subscription.IconURL,
@@ -204,6 +207,9 @@ func RefreshFeed(store *storage.Storage, userID, feedID int64, forceRefresh bool
 		slog.Int64("feed_id", feedID),
 		slog.Bool("force_refresh", forceRefresh),
 	)
+
+	//Hack: sleep for one second to not overload feeds like nitter
+	time.Sleep(2 * time.Second)
 
 	user, storeErr := store.UserByID(userID)
 	if storeErr != nil {
@@ -322,7 +328,7 @@ func RefreshFeed(store *storage.Storage, userID, feedID int64, forceRefresh bool
 				slog.Any("error", intErr),
 			)
 		} else if userIntegrations != nil && len(newEntries) > 0 {
-			go integration.PushEntries(originalFeed, newEntries, userIntegrations)
+			go integration.PushEntries(store, originalFeed, newEntries, userIntegrations)
 		}
 
 		// We update caching headers only if the feed has been modified,
@@ -333,6 +339,7 @@ func RefreshFeed(store *storage.Storage, userID, feedID int64, forceRefresh bool
 		checkFeedIcon(
 			store,
 			requestBuilder,
+			userID,
 			originalFeed.ID,
 			originalFeed.SiteURL,
 			updatedFeed.IconURL,
@@ -356,31 +363,30 @@ func RefreshFeed(store *storage.Storage, userID, feedID int64, forceRefresh bool
 	return nil
 }
 
-func checkFeedIcon(store *storage.Storage, requestBuilder *fetcher.RequestBuilder, feedID int64, websiteURL, feedIconURL string) {
-	if !store.HasIcon(feedID) {
-		iconFinder := icon.NewIconFinder(requestBuilder, websiteURL, feedIconURL)
-		if icon, err := iconFinder.FindIcon(); err != nil {
-			slog.Debug("Unable to find feed icon",
+func checkFeedIcon(store *storage.Storage, requestBuilder *fetcher.RequestBuilder, userID, feedID int64, websiteURL, feedIconURL string) {
+	originalIcon, _ := store.IconByFeedID(userID, feedID)
+	iconFinder := icon.NewIconFinder(requestBuilder, websiteURL, feedIconURL)
+	if icon, err := iconFinder.FindIcon(); err != nil {
+		slog.Debug("Unable to find feed icon",
+			slog.Int64("feed_id", feedID),
+			slog.String("website_url", websiteURL),
+			slog.String("feed_icon_url", feedIconURL),
+			slog.Any("error", err),
+		)
+	} else if icon == nil {
+		slog.Debug("No icon found",
+			slog.Int64("feed_id", feedID),
+			slog.String("website_url", websiteURL),
+			slog.String("feed_icon_url", feedIconURL),
+		)
+	} else if originalIcon == nil || originalIcon.Hash != icon.Hash {
+		if err := store.CreateFeedIcon(feedID, icon); err != nil {
+			slog.Error("Unable to store feed icon",
 				slog.Int64("feed_id", feedID),
 				slog.String("website_url", websiteURL),
 				slog.String("feed_icon_url", feedIconURL),
 				slog.Any("error", err),
 			)
-		} else if icon == nil {
-			slog.Debug("No icon found",
-				slog.Int64("feed_id", feedID),
-				slog.String("website_url", websiteURL),
-				slog.String("feed_icon_url", feedIconURL),
-			)
-		} else {
-			if err := store.CreateFeedIcon(feedID, icon); err != nil {
-				slog.Error("Unable to store feed icon",
-					slog.Int64("feed_id", feedID),
-					slog.String("website_url", websiteURL),
-					slog.String("feed_icon_url", feedIconURL),
-					slog.Any("error", err),
-				)
-			}
 		}
 	}
 }

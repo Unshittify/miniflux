@@ -90,4 +90,5 @@ type Integration struct {
 	OmnivoreEnabled                  bool
 	OmnivoreAPIKey                   string
 	OmnivoreURL                      string
+	MediaDownloadEnabled             bool
 }

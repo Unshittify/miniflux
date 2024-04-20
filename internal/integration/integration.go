@@ -4,7 +4,10 @@
 package integration // import "miniflux.app/v2/internal/integration"
 
 import (
+	"github.com/otiai10/gosseract/v2"
 	"log/slog"
+	"miniflux.app/v2/internal/reader/contentmedia"
+	"miniflux.app/v2/internal/storage"
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/integration/apprise"
@@ -379,7 +382,7 @@ func SendEntry(entry *model.Entry, userIntegrations *model.Integration) {
 }
 
 // PushEntries pushes a list of entries to activated third-party providers during feed refreshes.
-func PushEntries(feed *model.Feed, entries model.Entries, userIntegrations *model.Integration) {
+func PushEntries(store *storage.Storage, feed *model.Feed, entries model.Entries, userIntegrations *model.Integration) {
 	if userIntegrations.MatrixBotEnabled {
 		slog.Debug("Sending new entries to Matrix",
 			slog.Int64("user_id", userIntegrations.UserID),
@@ -481,6 +484,19 @@ func PushEntries(feed *model.Feed, entries model.Entries, userIntegrations *mode
 						slog.Any("error", err),
 					)
 				}
+			}
+		}
+	}
+
+	if userIntegrations.MediaDownloadEnabled || true {
+		client := gosseract.NewClient()
+		defer client.Close()
+		for _, entry := range entries {
+			mediaErr := contentmedia.FetchEntryMedia(store, entry, client)
+
+			if mediaErr != nil {
+				slog.Error("Unable to fetch entry media", slog.Any("error", mediaErr))
+				continue
 			}
 		}
 	}

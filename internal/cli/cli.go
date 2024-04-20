@@ -33,6 +33,8 @@ const (
 	flagRefreshFeedsHelp    = "Refresh a batch of feeds and exit"
 	flagRunCleanupTasksHelp = "Run cleanup tasks (delete old sessions and archives old entries)"
 	flagExportUserFeedsHelp = "Export user feeds (provide the username as argument)"
+	flagDownloadMediaHelp   = "Archive external entry content like images"
+	flagTranscribeMediaHelp = "Generate a transcription for downloaded media"
 )
 
 // Parse parses command line arguments.
@@ -53,6 +55,10 @@ func Parse() {
 		flagRefreshFeeds    bool
 		flagRunCleanupTasks bool
 		flagExportUserFeeds string
+		flagDownloadMedia   bool
+		flagDownloadCount   int
+		flagTranscribeMedia bool
+		flagTranscribeCount int
 	)
 
 	flag.BoolVar(&flagInfo, "info", false, flagInfoHelp)
@@ -72,6 +78,10 @@ func Parse() {
 	flag.BoolVar(&flagRefreshFeeds, "refresh-feeds", false, flagRefreshFeedsHelp)
 	flag.BoolVar(&flagRunCleanupTasks, "run-cleanup-tasks", false, flagRunCleanupTasksHelp)
 	flag.StringVar(&flagExportUserFeeds, "export-user-feeds", "", flagExportUserFeedsHelp)
+	flag.BoolVar(&flagDownloadMedia, "download-media", false, flagDownloadMediaHelp)
+	flag.IntVar(&flagDownloadCount, "download-count", 100, flagDownloadMediaHelp)
+	flag.BoolVar(&flagTranscribeMedia, "transcribe-media", false, flagTranscribeMediaHelp)
+	flag.IntVar(&flagTranscribeCount, "transcribe-count", 100, flagTranscribeMediaHelp)
 	flag.Parse()
 
 	cfg := config.NewParser()
@@ -222,6 +232,16 @@ func Parse() {
 
 	if flagRunCleanupTasks {
 		runCleanupTasks(store)
+		return
+	}
+
+	if flagDownloadMedia {
+		downloadMedia(store, flagDownloadCount)
+		return
+	}
+
+	if flagTranscribeMedia {
+		transcribeMedia(store, flagTranscribeCount)
 		return
 	}
 

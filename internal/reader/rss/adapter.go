@@ -7,7 +7,6 @@ import (
 	"html"
 	"log/slog"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,11 +54,13 @@ func (r *RSSAdapter) BuildFeed(baseURL string) *model.Feed {
 	}
 
 	// Get TTL if defined.
-	if r.rss.Channel.TTL != "" {
-		if ttl, err := strconv.Atoi(r.rss.Channel.TTL); err == nil {
-			feed.TTL = ttl
+	/*
+		if r.rss.Channel.TTL != "" {
+			if ttl, err := strconv.Atoi(r.rss.Channel.TTL); err == nil {
+				feed.TTL = ttl
+			}
 		}
-	}
+	*/
 
 	// Get the feed icon URL if defined.
 	if r.rss.Channel.Image != nil {

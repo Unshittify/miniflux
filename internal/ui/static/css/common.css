@@ -1016,6 +1016,7 @@ article.category-has-unread {
 .entry-content video,
 .entry-content img {
     max-width: 100%;
+    max-height: 400px;
 }
 
 .entry-content figure {

@@ -48,6 +48,42 @@ func (e *EntryQueryBuilder) WithSearchQuery(query string) *EntryQueryBuilder {
 	return e
 }
 
+// WithSearchQueryMedia adds full-text search query to the condition.
+func (e *EntryQueryBuilder) WithSearchQueryMedia(query string) *EntryQueryBuilder {
+	if query != "" {
+		nArgs := len(e.args) + 1
+		e.conditions = append(e.conditions, fmt.Sprintf(`(e.document_vectors @@ plainto_tsquery($%d) OR e.id IN (
+			SELECT em.entry_id
+			FROM media m 
+			LEFT JOIN entry_media em ON em.medium_id = m.id
+			WHERE text_vectors @@ plainto_tsquery($%d)
+		))`, nArgs, nArgs))
+		e.args = append(e.args, query)
+
+		// 0.0000001 = 0.1 / (seconds_in_a_day)
+		e.WithSorting(
+			fmt.Sprintf(`ts_rank(document_vectors, plainto_tsquery($%d))
+			+ (
+				select coalesce(sum(ts_rank(m.text_vectors, plainto_tsquery($%d))), 0) 
+				FROM media m 
+				LEFT JOIN entry_media em ON em.medium_id = m.id
+				where em.entry_id = e.id AND text_vectors @@ plainto_tsquery($%d)
+				limit 1
+			) - extract (epoch from now() - published_at)::float * 0.0000001`, nArgs, nArgs, nArgs),
+			"DESC",
+		)
+	}
+	return e
+}
+
+// With arbitrary condition in where clause.
+func (e *EntryQueryBuilder) With(query string) *EntryQueryBuilder {
+	if query != "" {
+		e.conditions = append(e.conditions, query)
+	}
+	return e
+}
+
 // WithStarred adds starred filter.
 func (e *EntryQueryBuilder) WithStarred(starred bool) *EntryQueryBuilder {
 	if starred {

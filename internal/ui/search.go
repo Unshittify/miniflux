@@ -29,7 +29,7 @@ func (h *handler) showSearchPage(w http.ResponseWriter, r *http.Request) {
 
 	if searchQuery != "" {
 		builder := h.store.NewEntryQueryBuilder(user.ID)
-		builder.WithSearchQuery(searchQuery)
+		builder.WithSearchQueryMedia(searchQuery)
 		builder.WithoutStatus(model.EntryStatusRemoved)
 		builder.WithOffset(offset)
 		builder.WithLimit(user.EntriesPerPage)

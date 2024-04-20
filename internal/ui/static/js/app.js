@@ -135,7 +135,7 @@ function markPageAsRead() {
             if (showOnlyUnread) {
                 window.location.href = window.location.href;
             } else {
-                goToPage("next", true);
+                window.location.reload();
             }
         });
     }

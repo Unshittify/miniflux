@@ -888,4 +888,37 @@ var migrations = []func(tx *sql.Tx) error{
 		_, err = tx.Exec(`DROP INDEX entries_feed_url_idx`)
 		return err
 	},
+	func(tx *sql.Tx) (err error) {
+		sql := `CREATE TABLE media (
+				id bigserial not null,
+				hash text not null unique,
+				mime_type text not null,
+				content bytea not null,
+				primary key (id)
+			);
+			CREATE INDEX media_hash_idx ON media USING btree (hash);
+			
+			CREATE TABLE entry_media (
+				entry_id bigint not null,
+				medium_id bigint not null,				
+				src text not null,
+				primary key(entry_id, medium_id),
+				foreign key (entry_id) references entries(id) on delete cascade,
+				foreign key (medium_id) references media(id) on delete cascade
+			);
+			CREATE INDEX entry_media_src_idx ON entry_media USING btree (src);
+
+			ALTER TABLE entries ADD COLUMN archived_at timestamp with time zone default null;`
+		_, err = tx.Exec(sql)
+		return err
+	},
+	func(tx *sql.Tx) (err error) {
+		sql := `
+			ALTER TABLE media ADD COLUMN text text not null default '';
+			ALTER TABLE media ADD COLUMN text_vectors tsvector not null default '';
+			
+			CREATE INDEX media_text_vectors_idx ON media USING gin(text_vectors);`
+		_, err = tx.Exec(sql)
+		return err
+	},
 }
