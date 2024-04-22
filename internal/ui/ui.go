@@ -167,6 +167,10 @@ func Serve(router *mux.Router, store *storage.Storage, pool *worker.Pool) {
 	uiRouter.HandleFunc("/webauthn/{credentialHandle}/rename", handler.renameCredential).Name("webauthnRename").Methods(http.MethodGet)
 	uiRouter.HandleFunc("/webauthn/{credentialHandle}/save", handler.saveCredential).Name("webauthnSave").Methods(http.MethodPost)
 
+	// Media
+	uiRouter.HandleFunc("/media/{mediumID}", handler.showMedium).Name("medium").Methods(http.MethodGet)
+	uiRouter.HandleFunc("/media/{mediumID}/text", handler.showMediumText).Name("mediumText").Methods(http.MethodGet)
+
 	router.HandleFunc("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("User-agent: *\nDisallow: /"))
